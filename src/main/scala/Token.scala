@@ -28,5 +28,5 @@ enum Value[T <: AnyVal](val v: T) extends Token {
 }
 
 case class Eof() extends Token {
-  override def value: Null = null
+  override def value: Char = 0
 }
