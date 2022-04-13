@@ -60,40 +60,40 @@ class Interpreter {
     }
 
 
-  def expr(): Array[Token] =
+  def tokenList(): Array[Token] =
     val arr = mutable.ArrayBuffer[Token]()
     while !isEof do
       arr.addOne(get_next_token())
     arr.toArray
 
+  def expr(xs: Array[Token]): Int =
+    var pos = 0
+    var v = factor(xs(0)).value
+    pos += 1
+    while pos < xs.length && Set(Op.Div, Op.Mul).contains(xs(pos)) do
+      val t = xs(pos)
+      pos += 1
+      t match
+        case Op.Div =>
+          v /= factor(xs(pos)).value
+        case Op.Mul =>
+          v *= factor(xs(pos)).value
+        case _ =>
+          throw RuntimeException("not implemented in expr")
+
+      pos += 1
+    v
+
   def eat[T <: Token](e: Token): T =
     val trans = e.asInstanceOf[T]
     trans
 
+  def factor(t: Token): Value.Integer =
+    eat[Value.Integer](t)
+
 
   def eval(): AnyVal =
-    val parsedExpr = expr()
+    val parsedExpr = tokenList()
 //    println(parsedExpr.mkString(","))
-    var carry = eat[Value.Integer](parsedExpr(0)).value
-    var i = 1
-    while i < parsedExpr.length do
-      val op = eat[Op](parsedExpr(i))
-      i += 1
-      if !op.isOp then throw RuntimeException("is not op")
-      val right = eat[Value.Integer](parsedExpr(i))
-      carry = op match {
-        case Op.Plus =>
-          carry + right.value
-        case Op.Minus =>
-          carry - right.value
-        case Op.Mul =>
-          carry * right.value
-        case Op.Div =>
-          if right.value == 0 then throw RuntimeException("div by 0")
-          carry / right.value
-        case _ =>
-          throw RuntimeException(s"not implemented op: $op")
-      }
-      i += 1
-    carry
+    expr(parsedExpr)
 }
