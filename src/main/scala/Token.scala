@@ -16,7 +16,7 @@ enum Op(val v: String) extends Token {
   case Div extends Op("/")
 
   override def isOp: Boolean = true
-  override def value: Op = this
+  override def value: String = v
 }
 
 enum Value[T <: AnyVal](val v: T) extends Token {

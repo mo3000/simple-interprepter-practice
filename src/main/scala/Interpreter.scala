@@ -7,6 +7,7 @@ class Interpreter {
 
   private var text = ""
   private var pos = 0
+  private var parsedToken: Array[Token] = Array.empty
 
   def input(text: String): Unit = {
     this.text = text
@@ -23,11 +24,14 @@ class Interpreter {
     while !isEof && current.isWhitespace do
       advance()
 
+  private def currentToken: Token = parsedToken(pos)
+
   private def peek_next: Char =
     if pos + 1 < text.length
       then text(pos + 1)
     else
       0
+
 
   private def get_next_token(): Token =
     skipWhiteSpace()
@@ -67,29 +71,46 @@ class Interpreter {
     arr.toArray
 
   def expr(xs: Array[Token]): Int =
-    var pos = 0
-    var v = factor(xs(0)).value
-    pos += 1
-    while pos < xs.length && Set(Op.Div, Op.Mul).contains(xs(pos)) do
-      val t = xs(pos)
+    parsedToken = xs
+    pos = 0
+    var v = term()
+    while pos < parsedToken.length && Set(Op.Plus, Op.Minus).contains(currentToken) do
+      val t = currentToken
       pos += 1
       t match
-        case Op.Div =>
-          v /= factor(xs(pos)).value
-        case Op.Mul =>
-          v *= factor(xs(pos)).value
-        case _ =>
-          throw RuntimeException("not implemented in expr")
-
-      pos += 1
+        case Op.Plus =>
+          v += term()
+        case Op.Minus =>
+          v -= term()
+    end while
     v
 
-  def eat[T <: Token](e: Token): T =
+
+  def cast[T <: Token](e: Token): T =
     val trans = e.asInstanceOf[T]
     trans
 
-  def factor(t: Token): Value.Integer =
-    eat[Value.Integer](t)
+  def eat[T <: Token](e: Token): T =
+    val t = cast[T](e)
+    pos += 1
+    t
+
+  def term(): Int =
+    var v = factor()
+    while pos < parsedToken.length && Set(Op.Mul, Op.Div).contains(currentToken) do
+      val t = currentToken
+      pos += 1
+      t match
+        case Op.Mul =>
+          v *= factor()
+        case Op.Div =>
+          v /= factor()
+    end while
+    v
+
+
+  def factor(): Int =
+    eat[Value.Integer](currentToken).value
 
 
   def eval(): AnyVal =
