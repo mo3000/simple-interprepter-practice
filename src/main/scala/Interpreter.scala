@@ -40,7 +40,7 @@ class Interpreter {
       case v if v.isDigit || ((v == '+' || v == '-') && peek_next.isDigit) =>
         var isFloat = false
         while !isEof && (current.isDigit || current == '.') do
-          pos += 1
+          advance()
           if v == '.' then
             if isFloat then
               throw new RuntimeException("encounter second dot")
@@ -52,13 +52,19 @@ class Interpreter {
         else
           Value.FloatNum(str.toFloat)
       case v if Set('+', '-', '*', '/').contains(v) =>
-        pos += 1
+        advance()
         v match {
           case '+' => Op.Plus
           case '-' => Op.Minus
           case '*' => Op.Mul
           case '/' => Op.Div
         }
+      case '(' =>
+        advance()
+        Op.LParen
+      case ')' =>
+        advance()
+        Op.RParen
       case v =>
         throw new RuntimeException(s"not implemented: ($v)")
     }
@@ -70,13 +76,11 @@ class Interpreter {
       arr.addOne(get_next_token())
     arr.toArray
 
-  def expr(xs: Array[Token]): Int =
-    parsedToken = xs
-    pos = 0
+  def expr(): Int =
     var v = term()
     while pos < parsedToken.length && Set(Op.Plus, Op.Minus).contains(currentToken) do
       val t = currentToken
-      pos += 1
+      advance()
       t match
         case Op.Plus =>
           v += term()
@@ -110,11 +114,19 @@ class Interpreter {
 
 
   def factor(): Int =
-    eat[Value.Integer](currentToken).value
+    if currentToken == Op.LParen then
+      advance()
+      val v = expr()
+      assert(currentToken == Op.RParen)
+      advance()
+      v
+    else
+      eat[Value.Integer](currentToken).value
 
 
   def eval(): AnyVal =
     val parsedExpr = tokenList()
-//    println(parsedExpr.mkString(","))
-    expr(parsedExpr)
+    parsedToken = parsedExpr
+    pos = 0
+    expr()
 }

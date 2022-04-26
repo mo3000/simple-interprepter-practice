@@ -14,6 +14,8 @@ enum Op(val v: String) extends Token {
   case Minus extends Op("-")
   case Mul extends Op("*")
   case Div extends Op("/")
+  case LParen extends Op("(")
+  case RParen extends Op(")")
 
   override def isOp: Boolean = true
   override def value: String = v
