@@ -24,7 +24,8 @@ enum Op(val v: String) extends Token {
 enum Value[T <: AnyVal](val v: T) extends Token {
   case Integer(i: Int) extends Value[Int](i)
   case FloatNum(f: Float) extends Value[Float](f)
-
+  
+  type valueType = T
   override def isValue: Boolean = true
   override def value: T = v
 }

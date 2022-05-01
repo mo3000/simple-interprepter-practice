@@ -1,7 +1,9 @@
 package org.ball.mini
 
+import org.ball.mini.ast.*
+
 import scala.collection.mutable
-import org.ball.mini.{Token, Value, Op}
+import org.ball.mini.{Op, Token, Value}
 
 class Interpreter {
 
@@ -76,16 +78,16 @@ class Interpreter {
       arr.addOne(get_next_token())
     arr.toArray
 
-  def expr(): Int =
+  def expr(): AstNode =
     var v = term()
     while pos < parsedToken.length && Set(Op.Plus, Op.Minus).contains(currentToken) do
       val t = currentToken
       advance()
       t match
         case Op.Plus =>
-          v += term()
+          v = BinOp(Op.Plus, v, term())
         case Op.Minus =>
-          v -= term()
+          v = BinOp(Op.Minus, v, term())
     end while
     v
 
@@ -99,21 +101,21 @@ class Interpreter {
     pos += 1
     t
 
-  def term(): Int =
+  def term(): AstNode =
     var v = factor()
     while pos < parsedToken.length && Set(Op.Mul, Op.Div).contains(currentToken) do
       val t = currentToken
       pos += 1
       t match
         case Op.Mul =>
-          v *= factor()
+          v = BinOp(Op.Mul, v, factor())
         case Op.Div =>
-          v /= factor()
+          v = BinOp(Op.Div, v, factor())
     end while
     v
 
 
-  def factor(): Int =
+  def factor(): AstNode =
     if currentToken == Op.LParen then
       advance()
       val v = expr()
@@ -121,10 +123,10 @@ class Interpreter {
       advance()
       v
     else
-      eat[Value.Integer](currentToken).value
+      Num(eat[Value.Integer](currentToken))
 
 
-  def eval(): AnyVal =
+  def astTree(): AstNode =
     val parsedExpr = tokenList()
     parsedToken = parsedExpr
     pos = 0
