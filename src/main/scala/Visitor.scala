@@ -24,6 +24,17 @@ class Visitor:
           case fl: Float => fl
           case v => throw RuntimeException(s"unexpected token $v")
         }
+      case UnaryOp(op, node) =>
+        val v = visit(node)
+        assert(v.isInstanceOf[Int] || v.isInstanceOf[Float])
+        if op == Op.Minus then
+          v match {
+            case i: Int => -i
+            case fl: Float => -fl
+            case _ => throw RuntimeException(s"type error: $v")
+          }
+        else
+          v
     end match
   end visit
 end Visitor

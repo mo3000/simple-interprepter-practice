@@ -5,7 +5,7 @@ import org.ball.mini.ast.*
 import scala.collection.mutable
 import org.ball.mini.{Op, Token, Value}
 
-class Interpreter {
+class Parser {
 
   private var text = ""
   private var pos = 0
@@ -29,8 +29,12 @@ class Interpreter {
   private def currentToken: Token = parsedToken(pos)
 
   private def peek_next: Char =
-    if pos + 1 < text.length
-      then text(pos + 1)
+    val p = pos
+    if p + 1 < text.length then
+      skipWhiteSpace()
+      val t = current
+      pos = p
+      t
     else
       0
 
@@ -116,14 +120,19 @@ class Interpreter {
 
 
   def factor(): AstNode =
-    if currentToken == Op.LParen then
-      advance()
-      val v = expr()
-      assert(currentToken == Op.RParen)
-      advance()
-      v
-    else
-      Num(eat[Value.Integer](currentToken))
+    currentToken match
+      case Op.LParen =>
+        advance()
+        val v = expr()
+        assert(currentToken == Op.RParen)
+        advance()
+        v
+      case v if v == Op.Plus || v == Op.Minus =>
+        advance()
+        val node = factor()
+        UnaryOp(v.asInstanceOf[Op], node)
+      case _ =>
+        Num(eat[Value.Integer](currentToken))
 
 
   def astTree(): AstNode =
