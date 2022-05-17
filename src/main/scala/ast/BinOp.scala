@@ -3,10 +3,10 @@ package ast
 
 import java.util.function.BinaryOperator
 
-case class BinOp(val op: Op, val left: AstNode, val right: AstNode)
+case class BinOp(op: Op, left: AstNode, right: AstNode)
   extends AstNode:
   
   override def toString: String =
-    s"BinOp($op, $left, $right)"
+    s"$left ${op.value} $right"
   
 end BinOp

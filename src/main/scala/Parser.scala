@@ -40,7 +40,6 @@ class Parser {
 
 
   private def get_next_token(): Token =
-    skipWhiteSpace()
     val start = pos
     current match {
       case v if v.isDigit || ((v == '+' || v == '-') && peek_next.isDigit) =>
@@ -71,6 +70,45 @@ class Parser {
       case ')' =>
         advance()
         Op.RParen
+      case '=' =>
+        val op = text.substring(pos, pos + 2)
+        if op == "==" then
+          pos += 2
+          Op.EQ
+        else
+          throw new RuntimeException(s"unknown op $op")
+      case '<' =>
+        if text(pos + 1) == '=' then
+          pos += 2
+          Op.LTE
+        else
+          advance()
+          Op.LT
+      case v if v.isLetter =>
+        val begin = pos
+        while !isEof && (current.isLetterOrDigit || current == '_') do
+          advance()
+        end while
+        text.substring(begin, pos) match
+          case "BEGIN" =>
+            Keyword.Begin
+          case "END" =>
+            Keyword.End
+          case v =>
+            Variable(v)
+      case '.' =>
+        advance()
+        Keyword.Dot
+      case ':' =>
+        if pos + 1 < text.length && text(pos + 1) == '=' then
+          pos += 2
+          Op.ASSIGN
+        else
+          advance()
+          Op.Colon
+      case ';' =>
+        advance()
+        Keyword.Semicolon
       case v =>
         throw new RuntimeException(s"not implemented: ($v)")
     }
@@ -78,8 +116,10 @@ class Parser {
 
   def tokenList(): Array[Token] =
     val arr = mutable.ArrayBuffer[Token]()
+    skipWhiteSpace()
     while !isEof do
       arr.addOne(get_next_token())
+      skipWhiteSpace()
     arr.toArray
 
   def expr(): AstNode =
@@ -102,14 +142,14 @@ class Parser {
 
   def eat[T <: Token](e: Token): T =
     val t = cast[T](e)
-    pos += 1
+    advance()
     t
 
   def term(): AstNode =
     var v = factor()
     while pos < parsedToken.length && Set(Op.Mul, Op.Div).contains(currentToken) do
       val t = currentToken
-      pos += 1
+      advance()
       t match
         case Op.Mul =>
           v = BinOp(Op.Mul, v, factor())
@@ -118,6 +158,55 @@ class Parser {
     end while
     v
 
+  def compound(): Compound =
+    eat(Keyword.Begin)
+    val c = Compound(stmtList())
+    eat(Keyword.End)
+    c
+
+  def assign(): Assign =
+    val v = variable()
+    assert(currentToken == Op.ASSIGN)
+    advance()
+    val right = expr()
+    Assign(v, right)
+
+
+  def variable(v: Variable): Var =
+    advance()
+    Var(v.name)
+
+  def variable(): Var =
+    val token = eat[Variable](currentToken)
+    Var(token.name)
+
+
+  def stmt(): AstNode =
+    if currentToken == Keyword.Begin then
+      compound()
+    else if currentToken.isVar then
+      assign()
+    else
+      NoOp()
+
+  def stmtList(): List[AstNode] =
+    val q = mutable.Queue[AstNode]()
+    q.enqueue(stmt())
+    while currentToken == Keyword.Semicolon do
+      eat(Keyword.Semicolon)
+      q.enqueue(stmt())
+    end while
+    q.toList
+
+
+  def eat(word: Keyword): Unit =
+    assert(currentToken == word)
+    advance()
+
+  def program(): Compound =
+    val c = compound()
+    assert(currentToken == Keyword.Dot)
+    c
 
   def factor(): AstNode =
     currentToken match
@@ -131,6 +220,9 @@ class Parser {
         advance()
         val node = factor()
         UnaryOp(v.asInstanceOf[Op], node)
+      case Variable(name) =>
+        advance()
+        Var(name)
       case _ =>
         Num(eat[Value.Integer](currentToken))
 
@@ -139,5 +231,5 @@ class Parser {
     val parsedExpr = tokenList()
     parsedToken = parsedExpr
     pos = 0
-    expr()
+    program()
 }

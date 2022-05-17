@@ -22,5 +22,22 @@ class TestMain extends AnyFlatSpec {
     assert(eval("5---+-(3 + 4)- +2") == 10)
   }
 
+  "program" should "parse" in {
+    val prog = """
+      BEGIN
+        BEGIN
+          number := 2;
+          a := number;
+          b := 10 * a + 10 * number / 4;
+          c := a - - b
+        END;
+        x := 11;
+      END.
+      """.stripMargin
+    println(prog)
+    val ast = parse(prog)
+    println(ast)
+  }
+
 }
 

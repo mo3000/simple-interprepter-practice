@@ -5,6 +5,8 @@ sealed trait Token {
   def isOp: Boolean = false
   def isValue: Boolean = false
   def isObj: Boolean = false
+  def isVar: Boolean = false
+  def isKeyword: Boolean = false
 
   def value: AnyVal | String | Op | Null
 }
@@ -16,19 +18,51 @@ enum Op(val v: String) extends Token {
   case Div extends Op("/")
   case LParen extends Op("(")
   case RParen extends Op(")")
+  case EQ extends Op("==")
+  case LT extends Op("<")
+  case LTE extends Op("<=")
+  case GTE extends Op(">=")
+  case GT extends Op(">")
+  case Colon extends Op(":")
+  case ASSIGN extends Op(":=")
+
 
   override def isOp: Boolean = true
   override def value: String = v
 }
 
-enum Value[T <: AnyVal](val v: T) extends Token {
-  case Integer(i: Int) extends Value[Int](i)
-  case FloatNum(f: Float) extends Value[Float](f)
-  
-  type valueType = T
-  override def isValue: Boolean = true
-  override def value: T = v
+enum Keyword(val name: String) extends Token {
+  case Begin extends Keyword("BEGIN")
+  case End extends Keyword("END")
+  case Dot extends Keyword(".")
+  case Semicolon extends Keyword(";")
+
+  override def value: String = name
+
+  override def isKeyword = true
 }
+
+
+
+case class Variable(name: String) extends Token:
+
+  override def isVar: Boolean = true
+
+  override def value: String = name
+
+end Variable
+
+
+
+enum Value(val v: AnyVal | String) extends Token {
+  case Integer(i: Int) extends Value(i)
+  case FloatNum(f: Float) extends Value(f)
+  case StringVal(s: String) extends Value(s)
+  
+  override def isValue: Boolean = true
+  override def value: AnyVal | String = v
+}
+
 
 case class Eof() extends Token {
   override def value: Char = 0
