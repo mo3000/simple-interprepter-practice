@@ -16,6 +16,8 @@ object run extends App {
       END.
       """.stripMargin)
   val tree = inter.astTree()
-//  println(Visitor().visit(tree))
   println(tree)
+  val visitor = Visitor()
+  visitor.visit(tree)
+  println(visitor.dumpGlobal)
 }

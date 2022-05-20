@@ -8,8 +8,9 @@ sealed trait Token {
   def isVar: Boolean = false
   def isKeyword: Boolean = false
 
-  def value: AnyVal | String | Op | Null
+  def value: Int | Float | String | Op | Null
 }
+
 
 enum Op(val v: String) extends Token {
   case Plus extends Op("+")
@@ -54,16 +55,16 @@ end Variable
 
 
 
-enum Value(val v: AnyVal | String) extends Token {
+enum Value(val v: Int | Float | String) extends Token {
   case Integer(i: Int) extends Value(i)
   case FloatNum(f: Float) extends Value(f)
   case StringVal(s: String) extends Value(s)
   
   override def isValue: Boolean = true
-  override def value: AnyVal | String = v
+  override def value: Int | Float | String = v
 }
 
 
 case class Eof() extends Token {
-  override def value: Char = 0
+  override def value: Int = 0
 }

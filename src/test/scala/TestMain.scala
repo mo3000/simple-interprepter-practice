@@ -12,8 +12,16 @@ class TestMain extends AnyFlatSpec {
     parser.input(s)
     parser.astTree()
 
-  private def eval(s: String) =
-    visitor.visit(parse(s))
+  private def eval(s: String): Int | Float | String =
+    visitor.visit(parse(s)) match
+      case x: Int =>
+        x
+      case x: String =>
+        x
+      case x: Float =>
+        x
+      case _ =>
+        throw new RuntimeException("error type")
 
   "value" should "equal" in {
     assert(eval("(14 + 2 - (5 + 3)) * 3 - 6 / 2") == 21)
