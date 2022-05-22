@@ -1,6 +1,6 @@
 package org.ball.mini
 package ast
 
-case class Assign(v: Var, expr: AstNode) extends AstNode:
+case class Assign(name: String, expr: AstNode) extends AstNode:
 
-  override def toString: String = s"$v = $expr"
+  override def toString: String = s"$name = $expr"

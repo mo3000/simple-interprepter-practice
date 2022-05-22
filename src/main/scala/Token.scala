@@ -17,6 +17,7 @@ enum Op(val v: String) extends Token {
   case Minus extends Op("-")
   case Mul extends Op("*")
   case Div extends Op("/")
+  case IntDiv extends Op("DIV")
   case LParen extends Op("(")
   case RParen extends Op(")")
   case EQ extends Op("==")
@@ -26,7 +27,9 @@ enum Op(val v: String) extends Token {
   case GT extends Op(">")
   case Colon extends Op(":")
   case ASSIGN extends Op(":=")
-
+  case LComment extends Op("{")
+  case RComment extends Op("}")
+  case Comma extends Op(",")
 
   override def isOp: Boolean = true
   override def value: String = v
@@ -37,6 +40,11 @@ enum Keyword(val name: String) extends Token {
   case End extends Keyword("END")
   case Dot extends Keyword(".")
   case Semicolon extends Keyword(";")
+  case Program extends Keyword("PROGRAM")
+  case VarDecl extends Keyword("VAR")
+  case TypeInt extends Keyword("INTEGER")
+  case TypeReal extends Keyword("REAL")
+
 
   override def value: String = name
 
@@ -57,11 +65,15 @@ end Variable
 
 enum Value(val v: Int | Float | String) extends Token {
   case Integer(i: Int) extends Value(i)
-  case FloatNum(f: Float) extends Value(f)
+  case Real(f: Float) extends Value(f)
   case StringVal(s: String) extends Value(s)
   
   override def isValue: Boolean = true
   override def value: Int | Float | String = v
+}
+
+case class Comment(content: String) extends Token {
+  override def value = content
 }
 
 

@@ -5,6 +5,8 @@ import org.ball.mini.ast.*
 import scala.collection.mutable
 import org.ball.mini.{Op, Token, Value}
 
+import scala.annotation.tailrec
+
 class Parser {
 
   private var text = ""
@@ -22,9 +24,16 @@ class Parser {
 
   private def advance(): Unit = pos += 1
 
+  @tailrec
   private def skipWhiteSpace(): Unit =
-    while !isEof && current.isWhitespace do
+    while (!isEof && current.isWhitespace)
       advance()
+    if (!isEof && current == '{') {
+      while (!isEof && current != '}')
+        advance()
+      advance()
+      skipWhiteSpace()
+    }
 
   private def currentToken: Token = parsedToken(pos)
 
@@ -45,17 +54,18 @@ class Parser {
       case v if v.isDigit || ((v == '+' || v == '-') && peek_next.isDigit) =>
         var isFloat = false
         while !isEof && (current.isDigit || current == '.') do
-          advance()
-          if v == '.' then
+          if current == '.' then
             if isFloat then
               throw new RuntimeException("encounter second dot")
             else
               isFloat = true
+          advance()
+        end while
         val str = text.substring(start, pos)
         if !isFloat then
           Value.Integer(str.toInt)
         else
-          Value.FloatNum(str.toFloat)
+          Value.Real(str.toFloat)
       case v if Set('+', '-', '*', '/').contains(v) =>
         advance()
         v match {
@@ -84,18 +94,32 @@ class Parser {
         else
           advance()
           Op.LT
+      case ',' =>
+        advance()
+        Op.Comma
       case v if v.isLetter =>
         val begin = pos
         while !isEof && (current.isLetterOrDigit || current == '_') do
           advance()
         end while
-        text.substring(begin, pos) match
+        val word = text.substring(begin, pos)
+        word.toUpperCase match
           case "BEGIN" =>
             Keyword.Begin
           case "END" =>
             Keyword.End
-          case v =>
-            Variable(v)
+          case "VAR" =>
+            Keyword.VarDecl
+          case "INTEGER" =>
+            Keyword.TypeInt
+          case "REAL" =>
+            Keyword.TypeReal
+          case "PROGRAM" =>
+            Keyword.Program
+          case "DIV" =>
+            Op.IntDiv
+          case _ =>
+            Variable(word)
       case '.' =>
         advance()
         Keyword.Dot
@@ -118,8 +142,9 @@ class Parser {
     val arr = mutable.ArrayBuffer[Token]()
     skipWhiteSpace()
     while !isEof do
-      arr.addOne(get_next_token())
+      arr.append(get_next_token())
       skipWhiteSpace()
+    end while
     arr.toArray
 
   def expr(): AstNode =
@@ -147,7 +172,7 @@ class Parser {
 
   def term(): AstNode =
     var v = factor()
-    while pos < parsedToken.length && Set(Op.Mul, Op.Div).contains(currentToken) do
+    while pos < parsedToken.length && Set(Op.Mul, Op.Div, Op.IntDiv).contains(currentToken) do
       val t = currentToken
       advance()
       t match
@@ -155,6 +180,9 @@ class Parser {
           v = BinOp(Op.Mul, v, factor())
         case Op.Div =>
           v = BinOp(Op.Div, v, factor())
+        case Op.IntDiv =>
+          v = BinOp(Op.IntDiv, v, factor())
+      end match
     end while
     v
 
@@ -164,21 +192,15 @@ class Parser {
     eat(Keyword.End)
     c
 
+
   def assign(): Assign =
-    val v = variable()
-    assert(currentToken == Op.ASSIGN)
-    advance()
-    val right = expr()
-    Assign(v, right)
+    val name = variable()
+    eat(Op.ASSIGN)
+    Assign(name, expr())
 
-
-  def variable(v: Variable): Var =
-    advance()
-    Var(v.name)
-
-  def variable(): Var =
+  def variable(): String =
     val token = eat[Variable](currentToken)
-    Var(token.name)
+    token.name
 
 
   def stmt(): AstNode =
@@ -203,10 +225,50 @@ class Parser {
     assert(currentToken == word)
     advance()
 
-  def program(): Compound =
-    val c = compound()
-    assert(currentToken == Keyword.Dot)
-    c
+  def block(): Block =
+    val vars = if (currentToken == Keyword.VarDecl) decl() else List.empty
+    val comp = compound()
+    eat(Keyword.Dot)
+    Block(vars, comp)
+  end block
+
+  def varNameList(): List[String] =
+    val q = mutable.Queue[String]()
+    while currentToken != Op.Colon do
+      val v = eat[Variable](currentToken)
+      q.enqueue(v.name)
+      if currentToken == Op.Comma then
+        advance()
+      else
+        assert(currentToken == Op.Colon)
+    end while
+    q.toList
+
+  def decl(): List[VarDecl] =
+    eat(Keyword.VarDecl)
+    val q = mutable.Queue[VarDecl]()
+    while currentToken != Keyword.Begin do
+      val varnames = varNameList()
+      eat(Op.Colon)
+      val typeVal = if currentToken == Keyword.TypeInt then
+        ValueType.Integer
+      else if currentToken == Keyword.TypeReal then
+        ValueType.Real
+      else throw new RuntimeException(s"type def error: $currentToken")
+      advance()
+      eat(Keyword.Semicolon)
+      q.addAll(varnames.map(v => VarDecl(v, typeVal)))
+    end while
+    q.toList
+  end decl
+
+
+  def program(): Program =
+    eat(Keyword.Program)
+    val name = currentToken.asInstanceOf[Variable].value
+    advance()
+    eat(Keyword.Semicolon)
+    Program(name, block())
 
   def factor(): AstNode =
     currentToken match
@@ -222,7 +284,7 @@ class Parser {
         UnaryOp(v.asInstanceOf[Op], node)
       case Variable(name) =>
         advance()
-        Var(name)
+        VarCall(name)
       case _ =>
         Num(eat[Value.Integer](currentToken))
 
