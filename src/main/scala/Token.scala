@@ -63,10 +63,10 @@ end Variable
 
 
 
-enum Value(val v: Int | Float | String) extends Token {
-  case Integer(i: Int) extends Value(i)
-  case Real(f: Float) extends Value(f)
-  case StringVal(s: String) extends Value(s)
+enum BuiltinValue(val v: Int | Float | String | Null) extends Token {
+  case Integer(i: Int) extends BuiltinValue(i)
+  case Real(f: Float) extends BuiltinValue(f)
+  case StringVal(s: String) extends BuiltinValue(s)
   
   override def isValue: Boolean = true
   override def value: Int | Float | String = v

@@ -3,7 +3,7 @@ package org.ball.mini
 import org.ball.mini.ast.*
 
 import scala.collection.mutable
-import org.ball.mini.{Op, Token, Value}
+import org.ball.mini.{Op, Token, BuiltinValue}
 
 import scala.annotation.tailrec
 
@@ -63,9 +63,9 @@ class Parser {
         end while
         val str = text.substring(start, pos)
         if !isFloat then
-          Value.Integer(str.toInt)
+          BuiltinValue.Integer(str.toInt)
         else
-          Value.Real(str.toFloat)
+          BuiltinValue.Real(str.toFloat)
       case v if Set('+', '-', '*', '/').contains(v) =>
         advance()
         v match {
@@ -251,9 +251,9 @@ class Parser {
       val varnames = varNameList()
       eat(Op.Colon)
       val typeVal = if currentToken == Keyword.TypeInt then
-        ValueType.Integer
+        BuiltinAstValueType.IntType
       else if currentToken == Keyword.TypeReal then
-        ValueType.Real
+        BuiltinAstValueType.Real
       else throw new RuntimeException(s"type def error: $currentToken")
       advance()
       eat(Keyword.Semicolon)
@@ -286,7 +286,7 @@ class Parser {
         advance()
         VarCall(name)
       case _ =>
-        Num(eat[Value.Integer](currentToken))
+        Num(eat[BuiltinValue.Integer](currentToken))
 
 
   def astTree(): AstNode =

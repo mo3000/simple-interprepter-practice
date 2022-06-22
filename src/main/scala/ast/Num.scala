@@ -2,7 +2,7 @@ package org.ball.mini
 package ast
 
 
-case class Num(num: Value) extends AstNode:
+case class Num(num: BuiltinValue) extends AstNode:
 
   def value: Int | Float | String = num.value
 

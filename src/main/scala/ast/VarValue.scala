@@ -1,6 +1,8 @@
 package org.ball.mini
 package ast
 
+import scala.annotation.targetName
+
 
 type VarValueType = Int | Float | String
 
@@ -11,27 +13,27 @@ abstract class VarValue():
 
   def value = v
 
-  private var valueType: ValueType = ValueType.Integer
+  private var builtinValueType: BuiltinAstValueType = BuiltinAstValueType.IntType
 
-  def numericValue = valueType match
-    case ValueType.Real =>
+  def numericValue = builtinValueType match
+    case BuiltinAstValueType.Real =>
       v.asInstanceOf[Float]
-    case ValueType.Integer =>
+    case BuiltinAstValueType.IntType =>
       v.asInstanceOf[Int]
     case _ =>
       throw new RuntimeException(s"type error: $v is not numeric")
 
-  def setValue(x: Any, vtype: ValueType): Unit =
+  def setValue(x: Any, vtype: BuiltinAstValueType): Unit =
     v = x
-    valueType = vtype
+    builtinValueType = vtype
 
   def setValue(x: Any): Unit = x match
     case _: Int =>
-      setValue(x, ValueType.Integer)
+      setValue(x, BuiltinAstValueType.IntType)
     case _: Float =>
-      setValue(x, ValueType.Real)
+      setValue(x, BuiltinAstValueType.Real)
     case _: String =>
-      setValue(x, ValueType.String)
+      setValue(x, BuiltinAstValueType.StringType)
     case _ =>
       throw new RuntimeException(s"type error $x")
 

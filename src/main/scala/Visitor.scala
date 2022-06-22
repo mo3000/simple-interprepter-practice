@@ -1,10 +1,11 @@
 package org.ball.mini
 import ast.*
+import ast.Symbol as Sym
 import scala.collection.mutable
 
 class Visitor:
 
-  private val globalScope = mutable.HashMap[String, Int | Float | String]()
+  private val globalScope = SymbolTable()
   private var program: String = ""
 
   def dumpGlobal: String = globalScope.toString
@@ -70,6 +71,7 @@ class Visitor:
           decls.foreach(visit)
         visit(comp)
       case VarDecl(name, typeVal) =>
+        globalScope.define(Sym(name, SymType.Var, typeVal))
       case UnaryOp(op, node) =>
         val v = visit(node)
         assert(v.isInstanceOf[Int] || v.isInstanceOf[Float])
@@ -83,20 +85,30 @@ class Visitor:
           v
       case Compound(stmts) =>
         stmts.foreach(visit)
-      case Assign(v, expr) =>
+      case Assign(name, expr) =>
         val exprValue = visit(expr)
-        globalScope(v) = exprValue match
+        val castValue = exprValue match
           case _: Int =>
-            exprValue.asInstanceOf[Int]
+            BuiltinAstValueType.IntType
           case _: Float =>
-            exprValue.asInstanceOf[Float]
+            BuiltinAstValueType.Real
           case _: String =>
-            exprValue.asInstanceOf[String]
+            BuiltinAstValueType.StringType
           case _ =>
             throw new RuntimeException(s"error value $exprValue")
+        globalScope.setValue(name, exprValue, castValue)
       case NoOp() =>
       case VarCall(name) =>
-        globalScope(name)
+        val ret = globalScope.lookup(name)
+        ret.retType match
+          case BuiltinAstValueType.IntType =>
+            ret.getValue.asInstanceOf[Int]
+          case BuiltinAstValueType.Real =>
+            ret.getValue.asInstanceOf[Float]
+          case BuiltinAstValueType.StringType =>
+            ret.getValue.asInstanceOf[String]
+          case _ =>
+            throw new RuntimeException(s"type error, var type: ${ret.retType}")
     end match
   end visit
 end Visitor
