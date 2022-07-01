@@ -116,10 +116,12 @@ class Parser {
             Keyword.TypeReal
           case "PROGRAM" =>
             Keyword.Program
+          case "PROCEDURE" =>
+            Keyword.Procedure
           case "DIV" =>
             Op.IntDiv
           case _ =>
-            Variable(word)
+            VariableOrProc(word)
       case '.' =>
         advance()
         Keyword.Dot
@@ -199,7 +201,7 @@ class Parser {
     Assign(name, expr())
 
   def variable(): String =
-    val token = eat[Variable](currentToken)
+    val token = eat[VariableOrProc](currentToken)
     token.name
 
 
@@ -228,19 +230,20 @@ class Parser {
   def block(): Block =
     val vars = if (currentToken == Keyword.VarDecl) decl() else List.empty
     val comp = compound()
-    eat(Keyword.Dot)
+    if currentToken == Keyword.Dot then
+      assert(pos == parsedToken.length - 1)
+    else
+      eat(Keyword.Semicolon)
     Block(vars, comp)
   end block
 
   def varNameList(): List[String] =
     val q = mutable.Queue[String]()
     while currentToken != Op.Colon do
-      val v = eat[Variable](currentToken)
+      val v = eat[VariableOrProc](currentToken)
       q.enqueue(v.name)
       if currentToken == Op.Comma then
         advance()
-      else
-        assert(currentToken == Op.Colon)
     end while
     q.toList
 
@@ -265,10 +268,42 @@ class Parser {
 
   def program(): Program =
     eat(Keyword.Program)
-    val name = currentToken.asInstanceOf[Variable].value
+    val name = currentToken.asInstanceOf[VariableOrProc].name
     advance()
     eat(Keyword.Semicolon)
     Program(name, block())
+
+  def procedure(): Procedure =
+    eat(Keyword.Procedure)
+    val name = eat[VariableOrProc](currentToken).name
+    if currentToken == Op.LParen then
+      advance()
+      val arr = mutable.Queue[Param]()
+      while currentToken != Op.RParen do
+        val vname = eat[VariableOrProc](currentToken).name
+        eat(Op.Colon)
+        if currentToken == Keyword.TypeInt then
+          arr.enqueue(Param(vname, BuiltinAstValueType.IntType))
+        else
+          assert(currentToken == Keyword.TypeReal)
+          arr.enqueue(Param(vname, BuiltinAstValueType.Real))
+        advance()
+        if currentToken == Op.Comma then
+          advance()
+      end while
+      eat(Keyword.Semicolon)
+      Procedure(
+        name, arr.toList,
+        if currentToken == Keyword.VarDecl then Some(block())
+        else Option.empty)
+    else
+      eat(Keyword.Semicolon)
+      Procedure(name, List.empty, Option.empty)
+    end if
+  end procedure
+
+
+
 
   def factor(): AstNode =
     currentToken match
@@ -282,7 +317,7 @@ class Parser {
         advance()
         val node = factor()
         UnaryOp(v.asInstanceOf[Op], node)
-      case Variable(name) =>
+      case VariableOrProc(name) =>
         advance()
         VarCall(name)
       case _ =>

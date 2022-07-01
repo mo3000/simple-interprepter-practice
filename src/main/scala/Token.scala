@@ -44,6 +44,7 @@ enum Keyword(val name: String) extends Token {
   case VarDecl extends Keyword("VAR")
   case TypeInt extends Keyword("INTEGER")
   case TypeReal extends Keyword("REAL")
+  case Procedure extends Keyword("PROCEDURE")
 
 
   override def value: String = name
@@ -53,14 +54,13 @@ enum Keyword(val name: String) extends Token {
 
 
 
-case class Variable(name: String) extends Token:
+case class VariableOrProc(name: String) extends Token:
 
   override def isVar: Boolean = true
 
   override def value: String = name
 
-end Variable
-
+end VariableOrProc
 
 
 enum BuiltinValue(val v: Int | Float | String | Null) extends Token {

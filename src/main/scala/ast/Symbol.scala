@@ -1,5 +1,6 @@
 package org.ball.mini
 package ast
+import java.nio.ByteBuffer
 
 
 class Symbol(val name: String, val symType: SymType, val retType: AstValueType):
