@@ -5,10 +5,10 @@ import scala.collection.mutable
 
 class Visitor:
 
-  private val globalScope = SymbolTable()
+  private var scope = SymbolTable(null)
   private var program: String = ""
 
-  def dumpGlobal: String = globalScope.toString
+  def dumpGlobal: String = scope.toString
 
   type VisitorOutput = Unit | Int | Float | String
 
@@ -25,9 +25,9 @@ class Visitor:
       x.asInstanceOf[Float]
 
 
-
   def visit(node: AstNode): VisitorOutput =
     node match
+
       case BinOp(op, left, right) =>
         val l = visit(left)
         val r = visit(right)
@@ -59,19 +59,23 @@ class Visitor:
             else
               numericCastInt(l) * numericCastInt(r)
         end match
+
       case Num(v) =>
         v.value match {
           case i: Int => i
           case fl: Float => fl
           case v => throw RuntimeException(s"unexpected token $v")
         }
+
       case Program(name, Block(decls, comp)) =>
         program = name
         if decls.nonEmpty then
           decls.foreach(visit)
         visit(comp)
+
       case VarDecl(name, typeVal) =>
-        globalScope.define(Sym(name, SymType.Var, typeVal))
+        scope.define(Sym(name, SymType.Var, typeVal))
+
       case UnaryOp(op, node) =>
         val v = visit(node)
         assert(v.isInstanceOf[Int] || v.isInstanceOf[Float])
@@ -83,8 +87,10 @@ class Visitor:
           }
         else
           v
+
       case Compound(stmts) =>
         stmts.foreach(visit)
+
       case Assign(name, expr) =>
         val exprValue = visit(expr)
         val castValue = exprValue match
@@ -96,10 +102,23 @@ class Visitor:
             BuiltinAstValueType.StringType
           case _ =>
             throw new RuntimeException(s"error value $exprValue")
-        globalScope.setValue(name, exprValue, castValue)
+        scope.setValue(name, exprValue, castValue)
       case NoOp() =>
+
+      case Procedure(name, params, body) =>
+        scope.createChildTable(name)
+        scope = scope.child(name)
+        for param <- params do
+          scope.define(param.varname, param.vartype, param.defaultValue)
+        body.foreach(visit)
+        scope = scope.parent
+
+      case Block(decls, comp) =>
+        decls.foreach(varDecl => scope.define(varDecl.name, varDecl.typeVal, null))
+        visit(comp)
+
       case VarCall(name) =>
-        val ret = globalScope.lookup(name)
+        val ret = scope.lookup(name)
         ret.retType match
           case BuiltinAstValueType.IntType =>
             ret.getValue.asInstanceOf[Int]

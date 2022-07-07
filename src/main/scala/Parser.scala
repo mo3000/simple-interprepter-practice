@@ -240,8 +240,8 @@ class Parser {
   def varNameList(): List[String] =
     val q = mutable.Queue[String]()
     while currentToken != Op.Colon do
-      val v = eat[VariableOrProc](currentToken)
-      q.enqueue(v.name)
+      val name = eat[VariableOrProc](currentToken).name
+      q.enqueue(name)
       if currentToken == Op.Comma then
         advance()
     end while
@@ -295,14 +295,12 @@ class Parser {
       Procedure(
         name, arr.toList,
         if currentToken == Keyword.VarDecl then Some(block())
-        else Option.empty)
+        else None)
     else
       eat(Keyword.Semicolon)
-      Procedure(name, List.empty, Option.empty)
+      Procedure(name, List.empty, None)
     end if
   end procedure
-
-
 
 
   def factor(): AstNode =
